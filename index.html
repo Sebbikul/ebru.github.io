@@ -105,9 +105,10 @@
         .post-body img {
             max-width: 100%;
             height: auto;
-            border-radius: 8px;
-            margin: 1rem 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            margin: 1.2rem 0;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+            display: block;
         }
 
         .user-contributions {
@@ -195,7 +196,7 @@
 
                 lastTs = ts;
 
-                // Nyest først (desc)
+                // Nyest først
                 const posts = data.result.addedOrChanged
                     .slice()
                     .sort((a, b) => b.created - a.created);
@@ -217,7 +218,7 @@
                 const el = document.createElement('article');
                 el.className = 'post';
 
-                // Header – alltid med tittel hvis den finnes
+                // Header
                 let headerHTML = `
                     <div class="post-header">
                         ${post.title ? `<h2 class="post-title">${post.title}</h2>` : ''}
@@ -228,17 +229,28 @@
                     </div>
                 `;
 
-                // Body – kun hvis det faktisk finnes HTML-innhold
+                // Body – hovedinnhold + bilder
                 let bodyHTML = '';
                 if (post.content?.html && post.content.html.trim() !== '') {
+                    let cleanedHtml = post.content.html;
+
+                    // Finn og erstatt <ncpost-content data-type="BILDE"> med <img>
+                    cleanedHtml = cleanedHtml.replace(
+                        /<ncpost-content\s+data-type="BILDE"\s+data-src="([^"]+)"[^>]*>/gi,
+                        (match, src) => `<img src="${src}" alt="Bilde fra rettssaken" loading="lazy">`
+                    );
+
+                    // Fjern eventuelle tomme ncpost-content hvis de ikke ble erstattet
+                    cleanedHtml = cleanedHtml.replace(/<ncpost-content[^>]*><\/ncpost-content>/gi, '');
+
                     bodyHTML = `
                         <div class="post-body">
-                            ${post.content.html}
+                            ${cleanedHtml}
                         </div>
                     `;
                 }
 
-                // Brukerbidrag – kun hvis det finnes minst én
+                // Brukerbidrag – kun hvis det finnes
                 let contribHTML = '';
                 if (post.content?.userContribution?.length > 0) {
                     contribHTML = `
@@ -253,8 +265,7 @@
 
                 el.innerHTML = headerHTML + bodyHTML + contribHTML;
 
-                // Hvis verken body eller contributions finnes, men tittel/author finnes → vis likevel
-                if (headerHTML.trim() || contribHTML) {
+                if (headerHTML.trim() || bodyHTML || contribHTML) {
                     feed.appendChild(el);
                 }
             });
@@ -292,7 +303,7 @@
         // Første lasting
         loadFeed();
 
-        // Oppdater hvert 25 sek
+        // Oppdater hvert 25 sekunder
         setInterval(loadFeed, 25000);
     </script>
 </body>
