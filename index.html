@@ -138,9 +138,9 @@
             margin-right: 0.4rem;
         }
 
-        .loading, .error {
+        .loading, .error, .loading-more {
             text-align: center;
-            padding: 3rem 1rem;
+            padding: 2rem 1rem;
             font-size: 1.1rem;
             color: var(--gray);
         }
@@ -153,9 +153,7 @@
             .post-header, .post-body, .user-contributions {
                 padding: 1.1rem;
             }
-            h1 {
-                font-size: 1.8rem;
-            }
+            h1 { font-size: 1.8rem; }
         }
     </style>
 </head>
@@ -170,55 +168,125 @@
         <div id="loading" class="loading">Laster siste oppdateringer...</div>
         <div id="error" class="error" style="display:none;"></div>
         <div id="feed"></div>
+        <div id="loading-more" class="loading-more" style="display:none;">Laster eldre meldinger...</div>
     </div>
 
     <script>
-        const API_URL = 'https://livecentercdn.norkon.net/BulletinFeed/hamararbeiderblad/79265/Initial';
+        const BASE_URL = 'https://livecentercdn.norkon.net/BulletinFeed/hamararbeiderblad/79265/';
+        const INITIAL_ENDPOINT = 'Initial';
         const feed = document.getElementById('feed');
         const loading = document.getElementById('loading');
         const errorDiv = document.getElementById('error');
+        const loadingMore = document.getElementById('loading-more');
 
+        let allPosts = [];
         let lastTs = 0;
+        let oldestId = null;
+        let isLoadingMore = false;
 
-        async function loadFeed() {
+        async function fetchJson(url) {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        }
+
+        async function loadInitialAndPoll() {
             try {
-                const res = await fetch(API_URL);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-                const data = await res.json();
+                const data = await fetchJson(BASE_URL + INITIAL_ENDPOINT);
 
                 if (!data.success || !data.result?.addedOrChanged) {
-                    throw new Error('Ugyldig respons fra API');
+                    throw new Error('Ugyldig respons fra Initial');
                 }
 
-                const ts = data.result.ts;
-                if (ts <= lastTs) return;
+                const ts = data.result.ts || 0;
+                if (ts > lastTs) {
+                    lastTs = ts;
 
-                lastTs = ts;
+                    const newPosts = data.result.addedOrChanged || [];
+                    if (newPosts.length > 0) {
+                        // Oppdater oldestId hvis dette er første lasting eller vi har flere
+                        const currentOldest = Math.min(...newPosts.map(p => p.id));
+                        if (!oldestId || currentOldest < oldestId) {
+                            oldestId = currentOldest;
+                        }
 
-                // Nyest først
-                const posts = data.result.addedOrChanged
-                    .slice()
-                    .sort((a, b) => b.created - a.created);
+                        // Legg til nye poster (unngå duplikater basert på id)
+                        newPosts.forEach(post => {
+                            if (!allPosts.some(p => p.id === post.id)) {
+                                allPosts.push(post);
+                            }
+                        });
 
-                renderPosts(posts);
+                        renderAllPosts();
+                    }
+                }
+
                 loading.style.display = 'none';
                 errorDiv.style.display = 'none';
+
+                // Hvis hasMore eller vi mistenker flere sider → last inn eldre én gang ved start
+                if ((data.result.hasMore || allPosts.length < 20) && !isLoadingMore && oldestId) {
+                    loadEarlier(oldestId);
+                }
+
             } catch (err) {
-                errorDiv.textContent = `Kunne ikke laste oppdateringer: ${err.message}`;
+                errorDiv.textContent = `Feil ved lasting: ${err.message}`;
                 errorDiv.style.display = 'block';
                 loading.style.display = 'none';
             }
         }
 
-        function renderPosts(posts) {
+        async function loadEarlier(minId) {
+            if (isLoadingMore) return;
+            isLoadingMore = true;
+            loadingMore.style.display = 'block';
+
+            try {
+                const url = `${BASE_URL}EarlierObj/${minId}`;
+                const data = await fetchJson(url);
+
+                if (!data.success || !data.result?.bulletins) {
+                    console.warn('Ingen flere eldre meldinger eller ugyldig format');
+                    return;
+                }
+
+                const olderPosts = data.result.bulletins || [];
+
+                olderPosts.forEach(post => {
+                    if (!allPosts.some(p => p.id === post.id)) {
+                        allPosts.push(post);
+                    }
+                });
+
+                // Oppdater oldestId til den eldste i denne batchen
+                if (olderPosts.length > 0) {
+                    const newOldest = Math.min(...olderPosts.map(p => p.id));
+                    if (newOldest < minId) {
+                        oldestId = newOldest;
+                        // Hvis hasMore fortsatt sant → kunne lastet mer, men vi stopper her for nå
+                    }
+                }
+
+                renderAllPosts();
+
+            } catch (err) {
+                console.error('Feil ved lasting av eldre:', err);
+            } finally {
+                isLoadingMore = false;
+                loadingMore.style.display = 'none';
+            }
+        }
+
+        function renderAllPosts() {
+            // Sorter nyest → eldst
+            const sorted = [...allPosts].sort((a, b) => b.created - a.created);
+
             feed.innerHTML = '';
 
-            posts.forEach(post => {
+            sorted.forEach(post => {
                 const el = document.createElement('article');
                 el.className = 'post';
 
-                // Header
                 let headerHTML = `
                     <div class="post-header">
                         ${post.title ? `<h2 class="post-title">${post.title}</h2>` : ''}
@@ -229,35 +297,22 @@
                     </div>
                 `;
 
-                // Body – hovedinnhold + bilder
                 let bodyHTML = '';
                 if (post.content?.html && post.content.html.trim() !== '') {
-                    let cleanedHtml = post.content.html;
-
-                    // Finn og erstatt <ncpost-content data-type="BILDE"> med <img>
-                    cleanedHtml = cleanedHtml.replace(
+                    let cleaned = post.content.html.replace(
                         /<ncpost-content\s+data-type="BILDE"\s+data-src="([^"]+)"[^>]*>/gi,
-                        (match, src) => `<img src="${src}" alt="Bilde fra rettssaken" loading="lazy">`
+                        (m, src) => `<img src="${src}" alt="Bilde fra saken" loading="lazy">`
                     );
+                    cleaned = cleaned.replace(/<ncpost-content[^>]*><\/ncpost-content>/gi, '');
 
-                    // Fjern eventuelle tomme ncpost-content hvis de ikke ble erstattet
-                    cleanedHtml = cleanedHtml.replace(/<ncpost-content[^>]*><\/ncpost-content>/gi, '');
-
-                    bodyHTML = `
-                        <div class="post-body">
-                            ${cleanedHtml}
-                        </div>
-                    `;
+                    bodyHTML = `<div class="post-body">${cleaned}</div>`;
                 }
 
-                // Brukerbidrag – kun hvis det finnes
                 let contribHTML = '';
-                if (post.content?.userContribution?.length > 0) {
-                    contribHTML = `
-                        <div class="user-contributions">
-                            <h3>Spørsmål & kommentarer</h3>
-                    `;
-                    post.content.userContribution.forEach(c => {
+                const contributions = post.content?.userContribution || [];
+                if (contributions.length > 0) {
+                    contribHTML = `<div class="user-contributions"><h3>Spørsmål & kommentarer</h3>`;
+                    contributions.forEach(c => {
                         contribHTML += renderContribution(c, 0);
                     });
                     contribHTML += '</div>';
@@ -278,13 +333,11 @@
                     <span>${c.comment || '(ingen tekst)'}</span>
                 </div>
             `;
-
             if (c.childComments?.length) {
                 c.childComments.forEach(child => {
                     html += renderContribution(child, level + 1);
                 });
             }
-
             return html;
         }
 
@@ -292,19 +345,24 @@
             if (!unix) return '—';
             const d = new Date(unix * 1000);
             return d.toLocaleString('no-NO', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
             }).replace(',', '');
         }
 
-        // Første lasting
-        loadFeed();
+        // Start lasting
+        loadInitialAndPoll();
 
-        // Oppdater hvert 25 sekunder
-        setInterval(loadFeed, 25000);
+        // Polling for nye meldinger (kun Initial)
+        setInterval(loadInitialAndPoll, 25000);
+
+        // Valgfritt: last flere eldre ved scroll (laster én gang til ved start nå)
+        window.addEventListener('scroll', () => {
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 800 &&
+                oldestId && !isLoadingMore) {
+                loadEarlier(oldestId);
+            }
+        });
     </script>
 </body>
 </html>
