@@ -1,290 +1,299 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Live-oppdateringer – Ankebehandling Løten-saken</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f8f9fa;
-      color: #111;
-      margin: 0;
-      padding: 20px;
-      line-height: 1.6;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ebru-saken – Live oppdateringer</title>
+    <style>
+        :root {
+            --primary: #c8102e;
+            --dark: #1a1a1a;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+            --border: #dee2e6;
+        }
 
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-    }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            margin: 0;
+            padding: 16px;
+            line-height: 1.6;
+        }
 
-    header {
-      text-align: center;
-      padding: 1.5rem 0 2rem;
-      border-bottom: 1px solid #ddd;
-      margin-bottom: 2rem;
-    }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
 
-    header h1 {
-      margin: 0;
-      font-size: 1.8rem;
-      color: #b22222;
-    }
+        header {
+            text-align: center;
+            padding: 1.5rem 0 2rem;
+            border-bottom: 2px solid var(--primary);
+            margin-bottom: 2rem;
+        }
 
-    header p {
-      color: #555;
-      margin: 0.5rem 0 0;
-    }
+        h1 {
+            color: var(--primary);
+            margin: 0;
+            font-size: 2.1rem;
+        }
 
-    .update {
-      background: white;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      margin-bottom: 1.5rem;
-      padding: 1.25rem 1.5rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.07);
-      position: relative;
-    }
+        .subtitle {
+            color: var(--gray);
+            margin-top: 0.5rem;
+            font-size: 1.1rem;
+        }
 
-    .update-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 0.8rem;
-      padding-bottom: 0.6rem;
-      border-bottom: 1px solid #f0f0f0;
-    }
+        .post {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1.6rem;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: transform 0.08s ease, box-shadow 0.15s ease;
+        }
 
-    .author {
-      font-weight: 600;
-      color: #1a3c5e;
-    }
+        .post:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
 
-    .time {
-      color: #777;
-      font-size: 0.9rem;
-    }
+        .post-header {
+            padding: 1.2rem 1.4rem;
+            background: linear-gradient(to right, #f8f9fa, white);
+            border-bottom: 1px solid var(--border);
+        }
 
-    .title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      margin: 0.4rem 0 0.8rem;
-      color: #222;
-    }
+        .post-title {
+            margin: 0 0 0.6rem 0;
+            font-size: 1.35rem;
+            color: var(--dark);
+        }
 
-    .content {
-      margin: 0;
-    }
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.92rem;
+            color: var(--gray);
+        }
 
-    .content p {
-      margin: 0.65em 0;
-    }
+        .author {
+            font-weight: 600;
+            color: #444;
+        }
 
-    .content img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 6px;
-      margin: 1rem 0;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
+        .timestamp {
+            font-size: 0.88rem;
+        }
 
-    .update.importance-high {
-      border-left: 5px solid #c0392b;
-      background: #fffefe;
-    }
+        .post-body {
+            padding: 1.4rem;
+        }
 
-    @media (max-width: 600px) {
-      .update {
-        padding: 1rem;
-      }
-      header h1 {
-        font-size: 1.5rem;
-      }
-    }
-  </style>
+        .post-body:empty {
+            display: none;
+        }
+
+        .post-body p {
+            margin: 0 0 1rem 0;
+        }
+
+        .post-body img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1rem 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .user-contributions {
+            margin-top: 1.8rem;
+            padding: 1.2rem 1.4rem;
+            border-top: 1px dashed #e0e0e0;
+            background: #fafafa;
+        }
+
+        .user-contributions h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.15rem;
+            color: var(--dark);
+        }
+
+        .contrib {
+            padding: 1rem;
+            margin: 0.6rem 0;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+
+        .contrib-name {
+            font-weight: 700;
+            color: var(--primary);
+            margin-right: 0.4rem;
+        }
+
+        .loading, .error {
+            text-align: center;
+            padding: 3rem 1rem;
+            font-size: 1.1rem;
+            color: var(--gray);
+        }
+
+        .error {
+            color: #dc3545;
+        }
+
+        @media (max-width: 600px) {
+            .post-header, .post-body, .user-contributions {
+                padding: 1.1rem;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
 </head>
 <body>
 
-<div class="container">
+    <div class="container">
+        <header>
+            <h1>Ebru-saken</h1>
+            <div class="subtitle">Siste nytt fra rettssalen – ankebehandling drapet på Ole Andreas Sønstvedt</div>
+        </header>
 
-  <header>
-    <h1>Ankebehandling – drapet på Ole Andreas Sønstvedt</h1>
-    <p>Live-oppdateringer fra Hamar tinghus • Eidsivating lagmannsrett</p>
-  </header>
+        <div id="loading" class="loading">Laster siste oppdateringer...</div>
+        <div id="error" class="error" style="display:none;"></div>
+        <div id="feed"></div>
+    </div>
 
-  <div id="updates"></div>
+    <script>
+        const API_URL = 'https://livecentercdn.norkon.net/BulletinFeed/hamararbeiderblad/79265/Initial';
+        const feed = document.getElementById('feed');
+        const loading = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
 
-</div>
+        let lastTs = 0;
 
-<script>
-// -----------------------------------------------------------------------------
-// Konfigurasjon
-// -----------------------------------------------------------------------------
-const BASE_URL = 'https://livecentercdn.norkon.net/BulletinFeed/hamararbeiderblad/79265';
-const INITIAL_URL = `${BASE_URL}/Initial`;
-const POLL_INTERVAL = 30000; // 30 sekunder
+        async function loadFeed() {
+            try {
+                const res = await fetch(API_URL);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-let lastChangesId = null;
-let updates = []; // Holder alle oppdateringer
+                const data = await res.json();
 
-// -----------------------------------------------------------------------------
-// Hjelpefunksjoner
-// -----------------------------------------------------------------------------
-function unixToTime(unix) {
-  const date = new Date(unix * 1000);
-  return date.toLocaleTimeString('nb-NO', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
+                if (!data.success || !data.result?.addedOrChanged) {
+                    throw new Error('Ugyldig respons fra API');
+                }
 
-function createUpdateElement(update) {
-  const div = document.createElement('div');
-  div.className = `update ${update.importance === 1 ? 'importance-high' : ''}`;
-  div.dataset.id = update.id; // For å unngå duplikater
+                const ts = data.result.ts;
+                if (ts <= lastTs) return;
 
-  const header = document.createElement('div');
-  header.className = 'update-header';
+                lastTs = ts;
 
-  header.innerHTML = `
-    <span class="author">${update.authorName || 'Ukjent'}</span>
-    <span class="time">${unixToTime(update.created)}${update.updated ? ' (oppdatert ' + unixToTime(update.updated) + ')' : ''}</span>
-  `;
+                // Nyest først (desc)
+                const posts = data.result.addedOrChanged
+                    .slice()
+                    .sort((a, b) => b.created - a.created);
 
-  const title = document.createElement('div');
-  title.className = 'title';
-  title.textContent = update.title || '';
+                renderPosts(posts);
+                loading.style.display = 'none';
+                errorDiv.style.display = 'none';
+            } catch (err) {
+                errorDiv.textContent = `Kunne ikke laste oppdateringer: ${err.message}`;
+                errorDiv.style.display = 'block';
+                loading.style.display = 'none';
+            }
+        }
 
-  const content = document.createElement('div');
-  content.className = 'content';
-  content.innerHTML = update.content?.html || '';
+        function renderPosts(posts) {
+            feed.innerHTML = '';
 
-  // Håndter bilder fra <ncpost-content data-type="BILDE">
-  content.querySelectorAll('ncpost-content[data-type="BILDE"]').forEach(el => {
-    const src = el.getAttribute('data-src');
-    const caption = el.getAttribute('data-caption') || '';
-    const source = el.getAttribute('data-source') || '';
-    if (src) {
-      const img = document.createElement('img');
-      img.src = src;
-      img.alt = caption;
-      img.style.display = 'block';
+            posts.forEach(post => {
+                const el = document.createElement('article');
+                el.className = 'post';
 
-      const fig = document.createElement('figure');
-      fig.appendChild(img);
+                // Header – alltid med tittel hvis den finnes
+                let headerHTML = `
+                    <div class="post-header">
+                        ${post.title ? `<h2 class="post-title">${post.title}</h2>` : ''}
+                        <div class="meta">
+                            <span class="author">${post.authorName || 'Ukjent'}</span>
+                            <span class="timestamp">${formatDate(post.created)}</span>
+                        </div>
+                    </div>
+                `;
 
-      if (caption || source) {
-        const figcaption = document.createElement('figcaption');
-        figcaption.textContent = `${caption} ${source}`.trim();
-        figcaption.style.fontSize = '0.9rem';
-        figcaption.style.color = '#555';
-        figcaption.style.textAlign = 'center';
-        figcaption.style.marginTop = '0.4rem';
-        fig.appendChild(figcaption);
-      }
+                // Body – kun hvis det faktisk finnes HTML-innhold
+                let bodyHTML = '';
+                if (post.content?.html && post.content.html.trim() !== '') {
+                    bodyHTML = `
+                        <div class="post-body">
+                            ${post.content.html}
+                        </div>
+                    `;
+                }
 
-      el.replaceWith(fig);
-    }
-  });
+                // Brukerbidrag – kun hvis det finnes minst én
+                let contribHTML = '';
+                if (post.content?.userContribution?.length > 0) {
+                    contribHTML = `
+                        <div class="user-contributions">
+                            <h3>Spørsmål & kommentarer</h3>
+                    `;
+                    post.content.userContribution.forEach(c => {
+                        contribHTML += renderContribution(c, 0);
+                    });
+                    contribHTML += '</div>';
+                }
 
-  // Håndter custom innhold (f.eks. video) fra <ncpost-content data-type="CUSTOM">
-  content.querySelectorAll('ncpost-content[data-type="CUSTOM"]').forEach(el => {
-    // Her er det ofte embedded HTML, så sett innerHTML direkte
-    el.outerHTML = el.getAttribute('data-content') || '';
-  });
+                el.innerHTML = headerHTML + bodyHTML + contribHTML;
 
-  div.appendChild(header);
-  if (title.textContent.trim()) div.appendChild(title);
-  div.appendChild(content);
+                // Hvis verken body eller contributions finnes, men tittel/author finnes → vis likevel
+                if (headerHTML.trim() || contribHTML) {
+                    feed.appendChild(el);
+                }
+            });
+        }
 
-  return div;
-}
+        function renderContribution(c, level) {
+            let html = `
+                <div class="contrib" style="margin-left: ${level * 24}px;">
+                    <span class="contrib-name">${c.name || 'Anonym'}:</span>
+                    <span>${c.comment || '(ingen tekst)'}</span>
+                </div>
+            `;
 
-function renderUpdates() {
-  const container = document.getElementById('updates');
-  container.innerHTML = ''; // Tøm og render på nytt for å sikre rekkefølge
+            if (c.childComments?.length) {
+                c.childComments.forEach(child => {
+                    html += renderContribution(child, level + 1);
+                });
+            }
 
-  // Sorter etter created descending (nyest øverst)
-  updates.sort((a, b) => b.created - a.created);
+            return html;
+        }
 
-  updates.forEach(update => {
-    const el = createUpdateElement(update);
-    container.appendChild(el);
-  });
-}
+        function formatDate(unix) {
+            if (!unix) return '—';
+            const d = new Date(unix * 1000);
+            return d.toLocaleString('no-NO', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).replace(',', '');
+        }
 
-function addNewUpdates(newUpdates) {
-  newUpdates.forEach(newUpdate => {
-    // Sjekk om ID allerede finnes for å unngå duplikater
-    if (!updates.some(u => u.id === newUpdate.id)) {
-      updates.push(newUpdate);
-    } else {
-      // Oppdater eksisterende hvis updated
-      const index = updates.findIndex(u => u.id === newUpdate.id);
-      if (index !== -1) {
-        updates[index] = { ...updates[index], ...newUpdate };
-      }
-    }
-  });
-}
+        // Første lasting
+        loadFeed();
 
-// -----------------------------------------------------------------------------
-// Fetch funksjoner
-// -----------------------------------------------------------------------------
-async function fetchInitial() {
-  try {
-    const response = await fetch(INITIAL_URL);
-    if (!response.ok) throw new Error('Feil ved henting av initial data');
-    const data = await response.json();
-
-    if (data.success && data.result) {
-      updates = data.result.addedOrChanged || [];
-      lastChangesId = data.result.lastChangesId;
-      renderUpdates();
-      startPolling();
-    }
-  } catch (error) {
-    console.error('Feil ved initial fetch:', error);
-  }
-}
-
-async function fetchChanges() {
-  if (!lastChangesId) return;
-
-  try {
-    const changesUrl = `${BASE_URL}/Changes/${lastChangesId}`;
-    const response = await fetch(changesUrl);
-    if (!response.ok) {
-      if (response.status === 404) {
-        // Ingen endringer, fortsett polling
-        return;
-      }
-      throw new Error('Feil ved henting av endringer');
-    }
-    const data = await response.json();
-
-    if (data.success && data.result) {
-      const newUpdates = data.result.addedOrChanged || [];
-      if (newUpdates.length > 0) {
-        addNewUpdates(newUpdates);
-        renderUpdates();
-      }
-      lastChangesId = data.result.lastChangesId || lastChangesId;
-    }
-  } catch (error) {
-    console.error('Feil ved polling:', error);
-  }
-}
-
-function startPolling() {
-  setInterval(fetchChanges, POLL_INTERVAL);
-}
-
-// Start
-fetchInitial();
-
-</script>
-
+        // Oppdater hvert 25 sek
+        setInterval(loadFeed, 25000);
+    </script>
 </body>
 </html>
