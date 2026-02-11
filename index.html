@@ -275,12 +275,12 @@
     </div>
     <h1>Ankesaken etter Løten-drapet</h1>
     <div class="last-update" id="lastUpdate">
-      Sist sjekket: <span class="last-update-time">aldri</span>
+      Sist oppdatert: <span class="last-update-time">aldri</span>
     </div>
     <div class="credit">
       Laget av Sebbi 
       <img src="https://cdn.discordapp.com/avatars/469158879029100565/3a8c349cffd41503cf049083c8711239.webp" alt="Sebbi avatar" class="avatar">
-      for <a href="https://discord.gg/7a9wqAzcYc" target="_blank" rel="noopener noreferrer">True Crime Norway</a>
+      for <a href="https://discord.gg/7a9wqAzcYc" target="_blank" rel="noopener noreferrer">True Crime Norge</a>
     </div>
   </header>
 
@@ -497,7 +497,7 @@ async function render() {
     errorDiv.style.display = "none";
 
     // Alltid oppdater "Sist sjekket"-tidspunktet
-    lastUpdateEl.innerHTML = `Sist sjekket: <span class="last-update-time">${checkTime}</span> (oppdateres hvert 30. sekund)`;
+    lastUpdateEl.innerHTML = `Sist oppdatert: <span class="last-update-time">${checkTime}</span> (oppdateres fra Hamar Arbeiderblad hvert 30. sekund)`;
 
     // Bare oppdater innhold hvis det faktisk er nye data
     if (hasNewData) {
