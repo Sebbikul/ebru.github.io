@@ -275,7 +275,7 @@
     </div>
     <h1>Ankesaken etter Løten-drapet</h1>
     <div class="last-update" id="lastUpdate">
-      Sist oppdatert: <span class="last-update-time">aldri</span>
+      Sist sjekket: <span class="last-update-time">aldri</span>
     </div>
     <div class="credit">
       Laget av Sebbi 
@@ -291,13 +291,14 @@
 </div>
 
 <script>
-const FEED_URL = "https://livecentercdn.norkon.net/BulletinFeed/hamararbeiderblad/79265/EarlierObj/0";
+const BASE_FEED_URL = "https://livecentercdn.norkon.net/BulletinFeed/hamararbeiderblad/79265/EarlierObj/";
 const feedDiv   = document.getElementById("feed");
 const loading   = document.getElementById("loading");
 const errorDiv  = document.getElementById("error");
-const lastUpd   = document.getElementById("lastUpdate");
+const lastUpdateEl = document.getElementById("lastUpdate");
 const themeToggle = document.getElementById("themeToggle");
 
+let lastIds = "";
 let lastBulletins = [];
 
 // Theme handling
@@ -456,31 +457,51 @@ function renderQna(userContribution = []) {
   return wrapper;
 }
 
-function render() {
-  fetch(FEED_URL, { cache: "no-store" })
-    .then(r => {
-      if (!r.ok) throw new Error("Kunne ikke hente feed");
-      return r.json();
-    })
-    .then(data => {
-      loading.style.display = "none";
+async function fetchAllBulletins() {
+  let allBulletins = [];
+  let nextId = 0;
+  while (true) {
+    const url = `${BASE_FEED_URL}${nextId}`;
+    try {
+      const r = await fetch(url, { cache: "no-store" });
+      if (!r.ok) break;
+      const data = await r.json();
+      if (!data?.success || !data?.result?.bulletins) break;
+      allBulletins.push(...data.result.bulletins);
+      if (!data.result.hasMore) break;
+      nextId = data.result.bulletins[data.result.bulletins.length - 1].id;
+    } catch (err) {
+      console.error(err);
+      break;
+    }
+  }
+  return allBulletins;
+}
 
-      if (!data?.success || !data?.result?.bulletins) {
-        errorDiv.textContent = "Ugyldig data mottatt";
-        errorDiv.style.display = "block";
-        return;
-      }
+async function render() {
+  const checkTime = new Date().toLocaleTimeString("no-NO");
 
-      const bulletins = data.result.bulletins || [];
-      lastUpd.innerHTML = `Sist oppdatert: <span class="last-update-time">${new Date().toLocaleTimeString("no-NO")}</span> (oppdateres hver 30. sekund)`;
+  try {
+    const bulletins = await fetchAllBulletins();
+    bulletins.sort((a, b) => b.created - a.created);
 
-      const ids = bulletins.map(b => b.id).join(",");
-      if (ids === lastBulletins.join(",")) return;
-      lastBulletins = bulletins.map(b => b.id);
+    const ids = bulletins.map(b => b.id).join(",");
+    const hasNewData = ids !== lastIds;
 
+    lastIds = ids;
+    lastBulletins = bulletins.map(b => b.id);
+
+    const scrollY = window.scrollY;
+
+    loading.style.display = "none";
+    errorDiv.style.display = "none";
+
+    // Alltid oppdater "Sist sjekket"-tidspunktet
+    lastUpdateEl.innerHTML = `Sist sjekket: <span class="last-update-time">${checkTime}</span> (oppdateres hvert 30. sekund)`;
+
+    // Bare oppdater innhold hvis det faktisk er nye data
+    if (hasNewData) {
       feedDiv.innerHTML = "";
-
-      bulletins.sort((a,b) => b.created - a.created);
 
       bulletins.forEach(b => {
         const card = document.createElement("article");
@@ -509,12 +530,17 @@ function render() {
 
         feedDiv.appendChild(card);
       });
-    })
-    .catch(err => {
-      console.error(err);
-      errorDiv.textContent = "Kunne ikke laste oppdateringer – prøver igjen om 30 sek";
-      errorDiv.style.display = "block";
-    });
+
+      window.scrollTo(0, scrollY);
+    }
+  } catch (err) {
+    console.error(err);
+    errorDiv.textContent = "Kunne ikke laste oppdateringer – prøver igjen om 30 sek";
+    errorDiv.style.display = "block";
+
+    // Oppdater likevel tidspunktet selv om det feilet
+    lastUpdateEl.innerHTML = `Sist sjekket: <span class="last-update-time">${checkTime}</span> (feilet)`;
+  }
 }
 
 render();
