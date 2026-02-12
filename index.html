@@ -508,7 +508,7 @@ async function render() {
     errorDiv.style.display = "none";
 
     // Alltid oppdater "Sist oppdatert"
-    lastUpdateEl.innerHTML = `Sist oppdatert: <span class="last-update-time">${checkTime}</span> (sjekkes hvert 30. sekund)`;
+    lastUpdateEl.innerHTML = `Sist oppdatert: <span class="last-update-time">${checkTime}</span> (oppdateres fra Hamar Arbeiderblad hvert 30. sekund)`;
 
     // Hvis nye data → bygg om hele feed
     if (hasNewData) {
