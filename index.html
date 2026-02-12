@@ -300,6 +300,7 @@ const themeToggle = document.getElementById("themeToggle");
 
 let lastIds = "";
 let lastBulletins = [];
+let bulletinsCache = [];
 
 // Theme handling
 function setTheme(theme) {
@@ -309,6 +310,7 @@ function setTheme(theme) {
 
 function updateToggleIcon() {
   const current = document.documentElement.getAttribute('data-theme');
+  // Kan utvides om du vil ha flere ikoner
 }
 
 const savedTheme = localStorage.getItem('theme');
@@ -334,6 +336,15 @@ function timeAgo(timestamp) {
   if (diff < 86400) return Math.floor(diff/3600) + " t siden";
   const d = new Date(timestamp * 1000);
   return d.toLocaleDateString("no-NO", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
+}
+
+function updateTimeAgo() {
+  document.querySelectorAll('.time-ago').forEach(el => {
+    const timestamp = parseInt(el.dataset.timestamp, 10);
+    if (!isNaN(timestamp)) {
+      el.textContent = timeAgo(timestamp);
+    }
+  });
 }
 
 function renderContent(html) {
@@ -489,17 +500,17 @@ async function render() {
     const hasNewData = ids !== lastIds;
 
     lastIds = ids;
-    lastBulletins = bulletins.map(b => b.id);
+    bulletinsCache = bulletins;
 
     const scrollY = window.scrollY;
 
     loading.style.display = "none";
     errorDiv.style.display = "none";
 
-    // Alltid oppdater "Sist sjekket"-tidspunktet
-    lastUpdateEl.innerHTML = `Sist oppdatert: <span class="last-update-time">${checkTime}</span> (oppdateres fra Hamar Arbeiderblad hvert 30. sekund)`;
+    // Alltid oppdater "Sist oppdatert"
+    lastUpdateEl.innerHTML = `Sist oppdatert: <span class="last-update-time">${checkTime}</span> (sjekkes hvert 30. sekund)`;
 
-    // Bare oppdater innhold hvis det faktisk er nye data
+    // Hvis nye data → bygg om hele feed
     if (hasNewData) {
       feedDiv.innerHTML = "";
 
@@ -511,7 +522,7 @@ async function render() {
         meta.className = "meta";
         meta.innerHTML = `
           <span class="author">${b.authorName || "Ukjent"}</span>
-          <span class="time-ago">${timeAgo(b.created)}</span>
+          <span class="time-ago" data-timestamp="${b.created}">${timeAgo(b.created)}</span>
         `;
 
         let titleEl = "";
@@ -533,18 +544,29 @@ async function render() {
 
       window.scrollTo(0, scrollY);
     }
+
+    // Uansett → oppdater alle tidsstempler
+    updateTimeAgo();
+
   } catch (err) {
     console.error(err);
     errorDiv.textContent = "Kunne ikke laste oppdateringer – prøver igjen om 30 sek";
     errorDiv.style.display = "block";
 
-    // Oppdater likevel tidspunktet selv om det feilet
     lastUpdateEl.innerHTML = `Sist sjekket: <span class="last-update-time">${checkTime}</span> (feilet)`;
+    updateTimeAgo(); // oppdater likevel tidene vi har
   }
 }
 
 render();
-setInterval(render, 30000);
+setInterval(() => {
+  render();
+  // Ekstra kall for å sikre at tidene oppdateres selv ved feil i fetch
+  updateTimeAgo();
+}, 30000);
+
+// Kjør updateTimeAgo hyppigere (f.eks. hvert 20. sekund) for å holde "akkurat nå" / minutter presist
+setInterval(updateTimeAgo, 20000);
 </script>
 </body>
 </html>
