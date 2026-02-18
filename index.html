@@ -240,6 +240,25 @@
       font-size: 1.12rem;
     }
 
+    .more-button {
+      display: block;
+      margin: 1rem auto;
+      padding: 0.8rem 1.6rem;
+      background: var(--accent);
+      color: var(--card);
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .more-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
     @media (max-width: 680px) {
       .container { padding: 0 12px; }
       header { padding: 1.6rem 0 1.4rem; }
@@ -285,6 +304,9 @@
   </header>
 
   <div id="feed"></div>
+  <div id="moreContainer" style="text-align: center; margin: 1rem 0; display: none;">
+    <button id="moreButton" class="more-button">Vis mer</button>
+  </div>
 
   <div id="loading" class="loading">Laster siste oppdateringer…</div>
   <div id="error" class="error" style="display:none"></div>
@@ -292,15 +314,18 @@
 
 <script>
 const BASE_FEED_URL = "https://livecentercdn.norkon.net/BulletinFeed/hamararbeiderblad/79265/EarlierObj/";
-const feedDiv   = document.getElementById("feed");
-const loading   = document.getElementById("loading");
-const errorDiv  = document.getElementById("error");
+const feedDiv = document.getElementById("feed");
+const loading = document.getElementById("loading");
+const errorDiv = document.getElementById("error");
 const lastUpdateEl = document.getElementById("lastUpdate");
 const themeToggle = document.getElementById("themeToggle");
+const moreButton = document.getElementById("moreButton");
+const moreContainer = document.getElementById("moreContainer");
 
-let lastIds = "";
-let lastBulletins = [];
-let bulletinsCache = [];
+let nextId = 0; // For loading more (older)
+let maxId = 0; // For detecting new ones
+let allBulletins = [];
+let hasMore = true;
 
 // Theme handling
 function setTheme(theme) {
@@ -468,104 +493,102 @@ function renderQna(userContribution = []) {
   return wrapper;
 }
 
-async function fetchAllBulletins() {
-  let allBulletins = [];
-  let nextId = 0;
-  while (true) {
-    const url = `${BASE_FEED_URL}${nextId}`;
-    try {
-      const r = await fetch(url, { cache: "no-store" });
-      if (!r.ok) break;
-      const data = await r.json();
-      if (!data?.success || !data?.result?.bulletins) break;
-      allBulletins.push(...data.result.bulletins);
-      if (!data.result.hasMore) break;
-      nextId = data.result.bulletins[data.result.bulletins.length - 1].id;
-    } catch (err) {
-      console.error(err);
-      break;
-    }
+function createBulletinCard(b) {
+  const card = document.createElement("article");
+  card.className = "bulletin";
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.innerHTML = `
+    <span class="author">${b.authorName || "Ukjent"}</span>
+    <span class="time-ago" data-timestamp="${b.created}">${timeAgo(b.created)}</span>
+  `;
+
+  let titleEl = "";
+  if (b.title) titleEl = `<h2 class="title">${b.title}</h2>`;
+
+  const contentDiv = renderContent(b.content?.html);
+
+  card.appendChild(meta);
+  if (titleEl) card.insertAdjacentHTML("beforeend", titleEl);
+  card.appendChild(contentDiv);
+
+  if (b.content?.userContribution?.length) {
+    const qna = renderQna(b.content.userContribution);
+    if (qna) card.appendChild(qna);
   }
-  return allBulletins;
+
+  return card;
 }
 
-async function render() {
-  const checkTime = new Date().toLocaleTimeString("no-NO");
+async function fetchBatch(id) {
+  const url = `${BASE_FEED_URL}${id}`;
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error('Fetch failed');
+  const data = await r.json();
+  if (!data?.success || !data?.result?.bulletins) throw new Error('Invalid data');
+  return data.result;
+}
 
+async function loadMore() {
   try {
-    const bulletins = await fetchAllBulletins();
-    bulletins.sort((a, b) => b.created - a.created);
-
-    const ids = bulletins.map(b => b.id).join(",");
-    const hasNewData = ids !== lastIds;
-
-    lastIds = ids;
-    bulletinsCache = bulletins;
-
-    const scrollY = window.scrollY;
-
-    loading.style.display = "none";
-    errorDiv.style.display = "none";
-
-    // Alltid oppdater "Sist oppdatert"
-    lastUpdateEl.innerHTML = `Sist oppdatert: <span class="last-update-time">${checkTime}</span> (oppdateres fra Hamar Arbeiderblad hvert 30. sekund)`;
-
-    // Hvis nye data → bygg om hele feed
-    if (hasNewData) {
-      feedDiv.innerHTML = "";
-
-      bulletins.forEach(b => {
-        const card = document.createElement("article");
-        card.className = "bulletin";
-
-        const meta = document.createElement("div");
-        meta.className = "meta";
-        meta.innerHTML = `
-          <span class="author">${b.authorName || "Ukjent"}</span>
-          <span class="time-ago" data-timestamp="${b.created}">${timeAgo(b.created)}</span>
-        `;
-
-        let titleEl = "";
-        if (b.title) titleEl = `<h2 class="title">${b.title}</h2>`;
-
-        const contentDiv = renderContent(b.content?.html);
-
-        card.appendChild(meta);
-        if (titleEl) card.insertAdjacentHTML("beforeend", titleEl);
-        card.appendChild(contentDiv);
-
-        if (b.content?.userContribution?.length) {
-          const qna = renderQna(b.content.userContribution);
-          if (qna) card.appendChild(qna);
-        }
-
+    const result = await fetchBatch(nextId);
+    const newBulletins = result.bulletins;
+    if (newBulletins.length > 0) {
+      newBulletins.forEach(b => {
+        allBulletins.push(b);
+        const card = createBulletinCard(b);
         feedDiv.appendChild(card);
+        if (b.id > maxId) maxId = b.id;
       });
-
-      window.scrollTo(0, scrollY);
+      nextId = newBulletins[newBulletins.length - 1].id;
     }
-
-    // Uansett → oppdater alle tidsstempler
-    updateTimeAgo();
-
+    hasMore = result.hasMore;
+    moreContainer.style.display = hasMore ? 'block' : 'none';
   } catch (err) {
     console.error(err);
-    errorDiv.textContent = "Kunne ikke laste oppdateringer – prøver igjen om 30 sek";
+    errorDiv.textContent = "Kunne ikke laste flere oppdateringer";
     errorDiv.style.display = "block";
-
-    lastUpdateEl.innerHTML = `Sist sjekket: <span class="last-update-time">${checkTime}</span> (feilet)`;
-    updateTimeAgo(); // oppdater likevel tidene vi har
   }
 }
 
-render();
-setInterval(() => {
-  render();
-  // Ekstra kall for å sikre at tidene oppdateres selv ved feil i fetch
-  updateTimeAgo();
-}, 30000);
+async function checkForNew() {
+  const checkTime = new Date().toLocaleTimeString("no-NO");
+  lastUpdateEl.innerHTML = `Sist oppdatert: <span class="last-update-time">${checkTime}</span> (oppdateres fra Hamar Arbeiderblad hvert 30. sekund)`;
 
-// Kjør updateTimeAgo hyppigere (f.eks. hvert 20. sekund) for å holde "akkurat nå" / minutter presist
+  try {
+    const result = await fetchBatch(0);
+    const latestBulletins = result.bulletins;
+    const newOnes = latestBulletins.filter(b => b.id > maxId);
+    if (newOnes.length > 0) {
+      newOnes.sort((a, b) => b.created - a.created);
+      newOnes.forEach(b => {
+        allBulletins.unshift(b);
+        const card = createBulletinCard(b);
+        feedDiv.insertBefore(card, feedDiv.firstChild);
+        if (b.id > maxId) maxId = b.id;
+      });
+    }
+    errorDiv.style.display = "none";
+  } catch (err) {
+    console.error(err);
+    errorDiv.textContent = "Kunne ikke sjekke for nye oppdateringer – prøver igjen om 30 sek";
+    errorDiv.style.display = "block";
+  }
+  updateTimeAgo();
+}
+
+async function init() {
+  loading.style.display = "block";
+  await loadMore();
+  loading.style.display = "none";
+  await checkForNew(); // Initial update
+}
+
+moreButton.addEventListener('click', loadMore);
+
+init();
+setInterval(checkForNew, 30000);
 setInterval(updateTimeAgo, 20000);
 </script>
 </body>
