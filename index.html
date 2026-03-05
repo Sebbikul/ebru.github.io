@@ -294,7 +294,6 @@
     </div>
     <h1>Ankesaken etter Løten-drapet</h1>
     <div class="last-update" id="lastUpdate">
-      Sist oppdatert: <span class="last-update-time">aldri</span>
     </div>
     <div class="credit">
       Laget av Sebbi 
@@ -554,7 +553,6 @@ async function loadMore() {
 
 async function checkForNew() {
   const checkTime = new Date().toLocaleTimeString("no-NO");
-  lastUpdateEl.innerHTML = `Sist oppdatert: <span class="last-update-time">${checkTime}</span> (oppdateres fra Hamar Arbeiderblad hvert 30. sekund)`;
 
   try {
     const result = await fetchBatch(0);
@@ -588,8 +586,6 @@ async function init() {
 moreButton.addEventListener('click', loadMore);
 
 init();
-setInterval(checkForNew, 30000);
-setInterval(updateTimeAgo, 20000);
 </script>
 </body>
 </html>
